@@ -37,8 +37,6 @@ void NodeDtor(Node* root) {
 }
 
 Node* MakeNewNode(TreeElem data, NodeDataTypes type, Node* left, Node* right) {
-    assert((left == nullptr) == (right == nullptr));
-
     Node* newNode = (Node*)calloc(1, sizeof(newNode[0]));
     *newNode = {data, type, left, right};
 
@@ -66,12 +64,41 @@ void PrintTreeNodes(Tree* tree, Node* root, FILE* output) {
 
     char nodeData[MAX_NODE_DATA_LENGTH] = "";
 
-    if (root->type == TYPE_CONST)
+    switch (root->type) {
+    case TYPE_CONST:
         itoa(root->data, nodeData, 10);
-    else if (root->type == TYPE_OP)
+        break;
+    case TYPE_OP:
+        if (root->data == 'l') {
+            strcat(nodeData, "log");
+        }
+        else {
+            nodeData[0] = (char)root->data;
+        }
+        break;
+    case TYPE_VAR:
         nodeData[0] = (char)root->data;
-    else if (root->type == TYPE_VAR)
-        nodeData[0] = (char)root->data;
+        break;
+    case TYPE_UNO:
+        switch (root->data) {
+            case (int32_t)'s':
+                strcat(nodeData, "sin");
+                break;
+            case (int32_t)'c':
+                strcat(nodeData, "cos");
+                break;
+            default:
+                assert(FAIL && "UNKNOWN UNO OPERAND");
+                break;
+        }
+        break;
+    case TYPE_UNKNOWN:
+        assert(FAIL && "UNKNOWN OPERAND TYPE");
+        break;
+    default:
+        assert(FAIL && "UNKNOWN OPERAND TYPE");
+        break;
+    }
 
     char dataConverted[MAX_NODE_DATA_LENGTH] = "";
     Convert1251ToUtf8((const char*)nodeData, dataConverted);
@@ -118,6 +145,28 @@ void PrintTreeNodes(Tree* tree, Node* root, FILE* output) {
                 root - pointerAnchor, curNodeNumber, root->right - pointerAnchor);
 
         PrintTreeNodes(tree, root->left, output);
+        PrintTreeNodes(tree, root->right, output);
+        curRecursionDepth--;
+    }
+    else if ((root->left == nullptr) && (root->right != nullptr)) {
+        fprintf(output, 
+            "\t%lld[shape=plaintext, label = <"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING= \"0\" CELLPADDING=\"4\">"
+            "<TR>"
+                "<TD COLSPAN=\"2\">" TREE_TYPE "</TD>"
+            "</TR>"
+            "<TR>"
+                "<TD PORT = \"r%d\">" RIGHT_BRANCH "</TD>"
+            "</TR>"
+            "</TABLE>>];\n",
+            root - pointerAnchor, dataConverted, 
+            curNodeNumber, RIGHT_BRANCH_VALUE);
+
+        curRecursionDepth += 1;
+
+        fprintf(output, "\t\t%lld: <r%d> -> %lld;\n", 
+                root - pointerAnchor, curNodeNumber, root->right - pointerAnchor);
+
         PrintTreeNodes(tree, root->right, output);
         curRecursionDepth--;
     }

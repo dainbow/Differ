@@ -29,6 +29,7 @@ enum NodeDataTypes {
     TYPE_CONST   = 1,
     TYPE_OP      = 2,
     TYPE_VAR     = 3,
+    TYPE_UNO     = 4,
 };
 
 struct Node {
