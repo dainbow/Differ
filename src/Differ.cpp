@@ -7,23 +7,10 @@ int main () {
     ReadTreeFromFile(&tree, "Gachi.txt");
     MakeTreeGraph(&tree, G_STANDART_NAME);
 
-    Node* diffed = Differentiate(tree.root);
-    diffedTree.root = diffed;
-    printf("!!!%d!!!%d %p\n", diffedTree.root->left->type, diffedTree.root->left->right->type, diffedTree.root->left->right->right);
+    diffedTree.root = Differentiate(tree.root);
     MakeTreeGraph(&diffedTree, G_STANDART_NAME);
-
-    int32_t optimisationCounter = 0;
-    do {
-        optimisationCounter  = 0;
-
-        optimisationCounter += FoldConst(diffedTree.root);
-        optimisationCounter += CutEqualNodes({diffedTree.root, &diffedTree.root});
-        optimisationCounter += CutNullNodes({diffedTree.root, &diffedTree.root});
-        optimisationCounter += CutMinusOneNodes(diffedTree.root);
-
-        MakeTreeGraph(&diffedTree, G_STANDART_NAME);
-    } while (optimisationCounter);
-
+    OptimisationAfterDiff(&diffedTree);
+    
     TreeDtor(&diffedTree);
     TreeDtor(&tree);
     printf("END\n");
@@ -39,10 +26,12 @@ void ScanBase(Text* input, Stack* stack) {
         for (uint32_t curChar = 0; curChar < input->strings[curString].length - 1; curChar++) {
             int8_t* charPtr = input->strings[curString].value + curChar;
 
-            if ((*charPtr != '(') && (curChar == 0)) {
+            if ((*charPtr != '(') && 
+                (curChar == 0)) {
                 StackPush(stack, charPtr);
             }
-            else if ((*charPtr == '(') && (sscanf((const char*)charPtr + 1, " %1[^(]", trashBuff))) {
+            else if ((*charPtr == '(') && 
+                    (sscanf((const char*)charPtr + 1, " %1[^(]", trashBuff))) {
                 for (uint32_t curIdx = curChar + 1; curIdx < input->strings[curString].length; curIdx++) {
                     if (input->strings[curString].value[curIdx] == '(') {
                         StackPush(stack, charPtr);
@@ -58,7 +47,8 @@ void ScanBase(Text* input, Stack* stack) {
             else if (*charPtr == '(') {
                 StackPush(stack, charPtr);
             }
-            else if ((*charPtr == ')') && sscanf((const char*)charPtr + 1, " %1[^)]", trashBuff)) {
+            else if ((*charPtr == ')') && 
+                    sscanf((const char*)charPtr + 1, " %1[^)]", trashBuff)) {
                 StackPush(stack, charPtr + 1);
             }
             else if (*charPtr == ')') {
@@ -101,11 +91,9 @@ Node* MakeTreeFromStack(Stack* nodesStack) {
     int32_t currentParenthesisDepth = 0;
 
     for (int32_t curIdx = 0; curIdx < nodesStack->size; curIdx++) {
-        printf("%d iter.\n", curIdx);
         nodeConvertedData = ProcessNodeData(StackPopIndexDEVELOPERS_ONLY(nodesStack, curIdx), &nodeDataType);
         
         if (nodeDataType == TYPE_UNKNOWN) {
-            printf("%d iter.\n", curIdx);
             if ((char)nodeConvertedData == '(') {
                 currentParenthesisDepth += 1;
             }
@@ -118,7 +106,6 @@ Node* MakeTreeFromStack(Stack* nodesStack) {
                     leftOne     = (Node*)StackPop(&queueStack);
                     currentNode->left  = leftOne;
                 }
-                printf("Popped %c and %c and %c[%d]\n", (char)rightOne->data, (char)currentNode->data, (char)leftOne->data, leftOne->data);
                 
                 currentParenthesisDepth -= 1;
                 if (currentParenthesisDepth) {
@@ -126,7 +113,6 @@ Node* MakeTreeFromStack(Stack* nodesStack) {
                 }
                 else {
                     StackPush(&treeStack, (StackElem)currentNode);
-                    printf("TreeStack size is %d\n", treeStack.size);
                 }
             }
             continue;
@@ -135,7 +121,6 @@ Node* MakeTreeFromStack(Stack* nodesStack) {
 
         if (currentParenthesisDepth == 0) {
             StackPush(&treeStack, (StackElem)newNode);
-            printf("TreeStack size is %d\n", treeStack.size);
         }
         else {
             StackPush(&queueStack, (StackElem)newNode);
@@ -151,10 +136,6 @@ Node* MakeTreeFromStack(Stack* nodesStack) {
         currentNode->left  = leftOne;
     }
     
-    printf("First node char is %c\n", (char)currentNode->data);
-
-    printf("Tree stack size is %d\n", treeStack.size);
-
     StackDtor(&queueStack);
     StackDtor(&treeStack);
 
@@ -198,8 +179,7 @@ int32_t ProcessNodeData(StackElem rawData, NodeDataTypes* type) {
     int32_t convertedData = 0;
 
     int8_t buffer[MAX_TRASH_SIZE]      = "";
-    printf("rawData: %s\n", rawData);
-
+    
     if (sscanf((const char*)rawData, " %d", &convertedData)) {
         *type = TYPE_CONST;
 
@@ -236,6 +216,26 @@ int32_t ProcessNodeData(StackElem rawData, NodeDataTypes* type) {
     return -1;
 }
 
+#define N root
+#define R root->right
+#define L root->left
+
+#define D(smth) Differentiate(smth)
+#define C(smth) Copy(smth)
+
+#define MUL(first, second) MakeNewNode((int32_t)('*'), TYPE_OP, first, second)
+#define DIV(first, second) MakeNewNode((int32_t)('/'), TYPE_OP, first, second)
+#define ADD(first, second) MakeNewNode((int32_t)('+'), TYPE_OP, first, second)
+#define SUB(first, second) MakeNewNode((int32_t)('-'), TYPE_OP, first, second)
+#define LOG(first, second) MakeNewNode((int32_t)('l'), TYPE_OP, first, second)
+#define POW(first, second) MakeNewNode((int32_t)('^'), TYPE_OP, first, second)
+
+#define SIN(smth)          MakeNewNode((int32_t)'s', TYPE_UNO, nullptr, smth)
+#define COS(smth)          MakeNewNode((int32_t)'c', TYPE_UNO, nullptr, smth)
+
+#define CONST_NODE(smth)        MakeNewNode(smth, TYPE_CONST)
+#define VAR_NODE(smth)          MakeNewNode(smth, TYPE_VAR)     
+
 Node* Differentiate (Node* root) {
     assert(root  != nullptr);
 
@@ -249,74 +249,46 @@ Node* Differentiate (Node* root) {
             returningRoot = MakeNewNode(1, TYPE_CONST);
         return returningRoot;
     case TYPE_CONST:
-        returningRoot = MakeNewNode(0, TYPE_CONST);
-        return returningRoot;
+        return CONST_NODE(0);
     case TYPE_OP:
         switch (root->data) {
             case (int32_t)('-'):
-            case (int32_t)('+'): {
-                Node* leftSummand  = Differentiate(root->left);
-                Node* rightSummand = Differentiate(root->right);
+            case (int32_t)('+'): 
+                return ADD(D(L), D(R));
 
-                return MakeNewNode(root->data, TYPE_OP, leftSummand, rightSummand);
-            }
-            case (int32_t)('*'): {
-                Node* leftDiff  = Differentiate(root->left);
-                Node* rightDiff = Differentiate(root->right);
+            case (int32_t)('*'):
+                return ADD(MUL(D(L), C(R)), MUL(D(R), C(L)));
 
-                Node* leftCopy  = Copy(root->left);
-                Node* rightCopy = Copy(root->right);
+            case (int32_t)('/'):
+                return DIV(SUB(MUL(D(L), C(R)), MUL(C(L), D(R))), MUL(C(R), C(R)));
 
-                Node* leftSummand  = MakeNewNode((int32_t)('*'), TYPE_OP, leftDiff, rightCopy);
-                Node* rightSummand = MakeNewNode((int32_t)('*'), TYPE_OP, rightDiff, leftCopy);
+            case (int32_t)'l': 
+                return DIV(D(R), MUL(LOG(VAR_NODE('e'), C(L)), C(R)));
 
-                return MakeNewNode((int32_t)('+'), TYPE_OP, leftSummand, rightSummand);
-            }
-            case (int32_t)('/'): {
-                Node* leftDiff  = Differentiate(root->left);
-                Node* rightDiff = Differentiate(root->right);
+            case (int32_t)'^': 
+                if (CheckForVars(L) && CheckForVars(R))
+                    return MUL(C(N), D(MUL(LOG(VAR_NODE('e'), C(L)), C(R))));
 
-                Node* leftCopy  = Copy(root->left);
-                Node* rightCopy = Copy(root->right);
+                else if (CheckForVars(L)) 
+                    return MUL(D(L), MUL(C(R), POW(C(L), SUB(C(R), CONST_NODE(1)))));
 
-                Node* leftSummand  = MakeNewNode((int32_t)('*'), TYPE_OP, leftDiff, rightCopy);
-                Node* rightSummand = MakeNewNode((int32_t)('*'), TYPE_OP, rightDiff, leftCopy);
+                else if (CheckForVars(R))
+                    return MUL(LOG(VAR_NODE('e'), C(L)), MUL(D(R), POW(C(L), C(R))));
 
-                Node* numerator    = MakeNewNode((int32_t)('-'), TYPE_OP, leftSummand, rightSummand);
-                Node* denominator  = MakeNewNode((int32_t)('*'), TYPE_OP, Copy(root->right), Copy(root->right));
-
-                return  MakeNewNode((int32_t)('/'), TYPE_OP, numerator, denominator);
-            }
-            case (int32_t)'l': {
-                Node* base              = MakeNewNode('e', TYPE_VAR);
-                Node* stepen            = Copy(root->left);
-                Node* leftMultiplier    = MakeNewNode((int32_t)'l', TYPE_OP, base, stepen);
-
-                Node* denominator = MakeNewNode((int32_t)'*', TYPE_OP, leftMultiplier, Copy(root->right));
-
-                return MakeNewNode((int32_t)'/', TYPE_OP, Differentiate(root->right), denominator);
-            }
+                else
+                    return CONST_NODE(0);
+            
             default:
                 assert(FAIL && "INVALID OPERATION");
         }
     case TYPE_UNO:
-        switch (root->data)
-        {
-        case 's': {
-            Node* diffArgument = Differentiate(root->right);
-
-            Node* diffSin      = MakeNewNode('c', TYPE_UNO, nullptr, Copy(root->right));
-
-            return MakeNewNode((int32_t)'*', TYPE_OP, diffSin, diffArgument);
-        }
-        case 'c': {
-            Node* diffArgument = Differentiate(root->right);
-            Node* sin          = MakeNewNode('s', TYPE_UNO, nullptr, Copy(root->right));
-            Node* minusOne     = MakeNewNode(-1, TYPE_CONST);
-            Node* diffCos      = MakeNewNode((int32_t)'*', TYPE_OP, minusOne, sin);
-
-            return MakeNewNode((int32_t)'*', TYPE_OP, diffCos, diffArgument);
-        }
+        switch (root->data) {
+        case 's': 
+            return MUL(COS(C(R)), D(R));
+        
+        case 'c': 
+            return MUL(MUL(CONST_NODE(-1), SIN(C(R))), D(R));
+        
         default:
             break;
         }
@@ -344,7 +316,6 @@ Node* Copy (Node* root) {
         return MakeNewNode(root->data, root->type);
     }
 
-    printf("WARNING RETURN NULLPTR\n");
     return nullptr;
 }
 
@@ -352,32 +323,39 @@ int32_t FoldConst(Node* node) {
     assert(node != nullptr);
     int32_t returnValue = 0;
 
-    if ((node->type == TYPE_OP) &&
-        (node->left->type  == TYPE_CONST) &&
-        (node->right->type == TYPE_CONST)) {
+    if (node->type == TYPE_OP) {
+        if ((node->data != (int32_t)'l') &&
+            (node->left->type  == TYPE_CONST) &&
+            (node->right->type == TYPE_CONST)) {
         switch (node->data) {
-        case (int32_t)('+'):
-            node->data = node->left->data + node->right->data;
-            node->type = TYPE_CONST;
-            break;
-        case (int32_t)('-'):
-            node->data = node->left->data - node->right->data;
-            node->type = TYPE_CONST;
-            break;
-        case (int32_t)('*'):
-            node->data = node->left->data * node->right->data;
-            node->type = TYPE_CONST;
-            break;
-        case (int32_t)('/'):
-            node->data = node->left->data / node->right->data;
-            node->type = TYPE_CONST;
-            break;
-        case (int32_t)('l'):
-            return 0;
-            break;
-        default:
-            assert(FAIL && "UNKNOWN OPERATION");
+            case (int32_t)('+'):
+                node->data = node->left->data + node->right->data;
+                node->type = TYPE_CONST;
+                break;
+            case (int32_t)('-'):
+                node->data = node->left->data - node->right->data;
+                node->type = TYPE_CONST;
+                break;
+            case (int32_t)('*'):
+                node->data = node->left->data * node->right->data;
+                node->type = TYPE_CONST;
+                break;
+            case (int32_t)('/'):
+                node->data = node->left->data / node->right->data;
+                node->type = TYPE_CONST;
+                break;
+            default:
+                assert(FAIL && "UNKNOWN OPERATION");
+            }
         }
+        else if (((node->data) == 'l') &&
+                (node->left->type == node->right->type) && (node->left->data == node->right->data) &&
+                ((node->left->type == TYPE_CONST) || (node->left->type == TYPE_VAR))) {
+            node->data = 1;
+            node->type = TYPE_CONST;
+        }
+        else 
+            goto elseSection;        
 
         NodeDtor(node->left);
         NodeDtor(node->right);
@@ -387,7 +365,7 @@ int32_t FoldConst(Node* node) {
         return 1;
     }
     else {
-        printf("Trying to check node type\n");
+        elseSection:
         if (node->type != TYPE_CONST) {
             if (node->left->type  == TYPE_OP) {
                 returnValue += FoldConst(node->left);
@@ -496,21 +474,23 @@ int32_t CutEqualNodes(Context context) {
 int32_t CutNullNodes(Context context) {
     int32_t returnValue = 0;
 
-    if (context.node->data == (int32_t)'*') {
-        CUT_NULL_NODES(left, right, 0)
-        CUT_NULL_NODES(right, left, 0)
-    }
-    else if (context.node->data == (int32_t)'^') {
-        CUT_NULL_NODES(left, right, 0)
-    }
-    else if (context.node->data == (int32_t)'/') {
-        CUT_NULL_NODES(left, right, 0)
-        if (!context.node->right->data) {
-            assert(FAIL && "ZERO DIVISION ERROR");
+    if (context.node->type == TYPE_OP) {
+        if (context.node->data == (int32_t)'*') {
+            CUT_NULL_NODES(left, right, 0)
+            CUT_NULL_NODES(right, left, 0)
         }
-    }
-    else if (context.node->data == (int32_t)'l') {
-        CUT_NULL_NODES(right, left, 1)
+        else if (context.node->data == (int32_t)'^') {
+            CUT_NULL_NODES(left, right, 0)
+        }
+        else if (context.node->data == (int32_t)'/') {
+            CUT_NULL_NODES(left, right, 0)
+            if (!context.node->right->data) {
+                assert(FAIL && "ZERO DIVISION ERROR");
+            }
+        }
+        else if (context.node->data == (int32_t)'l') {
+            CUT_NULL_NODES(right, left, 1)
+        }
     }
 
     if (context.node->type == TYPE_OP) {
@@ -568,4 +548,36 @@ int32_t CutMinusOneNodes(Node* node) {
 
 #undef CUT_MINUS_ONE_NODES
 
+int32_t CheckForVars(Node* node) {
+    assert(node != nullptr);
+
+    if (node->type == TYPE_VAR) {
+        return 1;
+    }
+
+    if (node->left != nullptr) {
+        return CheckForVars(node->left);
+    }
+    if (node->right != nullptr) {
+        return CheckForVars(node->right);
+    }
+
+    return 0;
+}
+
+void OptimisationAfterDiff(Tree* tree) {
+    assert(tree != nullptr);
+
+    int32_t optimisationCounter = 0;
+    do {
+        optimisationCounter  = 0;
+
+        optimisationCounter += FoldConst(tree->root);
+        optimisationCounter += CutEqualNodes({tree->root, &tree->root});
+        optimisationCounter += CutNullNodes({tree->root, &tree->root});
+        optimisationCounter += CutMinusOneNodes(tree->root);
+
+        MakeTreeGraph(tree, G_STANDART_NAME);
+    } while (optimisationCounter);
+}
 //TODO Степени, tex, до конца DSL

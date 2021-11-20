@@ -27,8 +27,11 @@ int32_t Convert1251ToUtf8 (const char* input, char* output);
 
 Node* Differentiate (Node* root);
 Node* Copy (Node* root);
+void OptimisationAfterDiff(Tree* tree);
 
 int32_t FoldConst(Node* node);
 int32_t CutEqualNodes(Context context);
 int32_t CutNullNodes(Context context);
 int32_t CutMinusOneNodes(Node* node);
+
+int32_t CheckForVars(Node* node);
