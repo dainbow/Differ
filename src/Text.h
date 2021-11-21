@@ -78,6 +78,8 @@ void PrintStrings(const struct Text*, FILE* output);
 //! @param [in] text Pointer to the Text structure
 //-------------------------------------------------------------------------------------------------------
 
+void MakeText(Text* text, const char* inputFile);
+
 void DestroyText(struct Text*);
 
 #endif

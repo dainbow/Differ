@@ -131,15 +131,15 @@ int MakeStrings(struct Text *text) {
 	return 1;
 }
 
-/*void PrintStrings(const struct Text *text, FILE* output) {
+void MakeText(Text* text, const char* inputFile) {
     assert(text != nullptr);
-    assert(output != nullptr);
 
-    for (size_t curStr = 0; curStr < text->strAmount; curStr++) {
-        MyFPuts(text->strings[curStr].value, output);
-    }
-    fprintf(output, "%s\n", END_OF_PART);
-}*/
+    ReadTextFromFile(text, inputFile);
+
+    CountStrAmount(text);
+	FillStrings(text);
+    ProcessStrings(text);
+}
 
 void DestroyText(struct Text *text) {
     assert(text != nullptr);

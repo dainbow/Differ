@@ -8,7 +8,6 @@ char* MakeTreeGraph(Tree* tree, const char name[]) {
 
     GenerateOutputName(name, endName, G_PATH, G_OUTPUT_FORMAT);
 
-    printf("Trying to open %s\n", endName);
     FILE* output = fopen(endName, "w");
     assert(output != nullptr);
 

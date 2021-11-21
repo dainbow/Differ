@@ -81,8 +81,8 @@ int32_t StackPushIndexDEVELOPERS_ONLY(Stack* stack, StackElem pushedValue, int32
 StackElem StackPop(Stack* stack) {
     CheckAllStack(stack);
 
-    if (stack->capacity >= (int32_t)DECREASE_MULTIPLIER * stack->size)
-        stack->data      = StackDecrease(stack);
+    /*if (stack->capacity >= (int32_t)DECREASE_MULTIPLIER * stack->size)
+        stack->data      = StackDecrease(stack);*/
 
     assert(stack->size  != 0 && "STACK_UNDERFLOW");
 
@@ -99,12 +99,12 @@ StackElem StackPop(Stack* stack) {
 }
 
 StackElem StackPopIndexDEVELOPERS_ONLY(Stack* stack, int32_t index) {
-    CheckAllStack(stack);
+    assert(stack != nullptr);
+    assert(index < stack->size);
 
     StackElem poppedValue = *(StackElem*)(stack->data + index * sizeof(StackElem));
     *(StackElem*)(stack->data + index * sizeof(StackElem)) = (StackElem)POISON;
 
-    CheckAllStack(stack);
     return poppedValue;
 }
 

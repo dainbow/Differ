@@ -3,8 +3,8 @@ CXXFLAGS = -g -std=c++17 -Wall -Wextra -Weffc++ -Wc++0x-compat -Wc++11-compat -W
 SrcDir = src
 BinDir = bin
 
-Differ.exe: $(BinDir)/Differ.o $(BinDir)/Stack.o $(BinDir)/Text.o $(BinDir)/Utilities.o $(BinDir)/Tree.o $(BinDir)/Graph.o
-	g++ $(BinDir)/Differ.o $(BinDir)/Stack.o $(BinDir)/Text.o $(BinDir)/Utilities.o $(BinDir)/Tree.o $(BinDir)/Graph.o -o Differ.exe
+Differ.exe: $(BinDir)/Differ.o $(BinDir)/Latex.o $(BinDir)/Stack.o $(BinDir)/Text.o $(BinDir)/Utilities.o $(BinDir)/Tree.o $(BinDir)/Graph.o
+	g++ $(BinDir)/Differ.o $(BinDir)/Latex.o $(BinDir)/Stack.o $(BinDir)/Text.o $(BinDir)/Utilities.o $(BinDir)/Tree.o $(BinDir)/Graph.o -o Differ.exe
 
 $(BinDir)/Tree.o: $(SrcDir)/Tree.cpp $(SrcDir)/Tree.h
 	g++ -c $(SrcDir)/Tree.cpp -o $(BinDir)/Tree.o $(CXXFLAGS)
@@ -23,3 +23,6 @@ $(BinDir)/Utilities.o: $(SrcDir)/Utilities.cpp $(SrcDir)/Utilities.h
 
 $(BinDir)/Stack.o: $(SrcDir)/Stack.cpp $(SrcDir)/Stack.h
 	g++ -c $(SrcDir)/Stack.cpp -o $(BinDir)/Stack.o $(CXXFLAGS)
+
+$(BinDir)/Latex.o: $(SrcDir)/Latex.cpp $(SrcDir)/Latex.h
+	g++ -c $(SrcDir)/Latex.cpp -o $(BinDir)/Latex.o $(CXXFLAGS)
