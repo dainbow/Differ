@@ -1,6 +1,5 @@
 #pragma once
 
-#include "TXLib.h"
 #include <windows.h>
 #include <stdlib.h>
 

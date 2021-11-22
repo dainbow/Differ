@@ -643,11 +643,23 @@ void StopTex(FILE* output, char* outputName, Node* node) {
 
     char pdflatex[MAX_COMMAND_NAME] = "";
     char del[MAX_COMMAND_NAME]      = "";
+    char delLog[MAX_COMMAND_NAME]   = "";
+    char delAux[MAX_COMMAND_NAME]   = "";
     char start[MAX_COMMAND_NAME]    = "";
 
     sprintf(pdflatex, "pdflatex %s -output-directory=%s", outputName, TEX_PATH);
+    
+    sprintf(del,    "del \"%s\"", outputName);
+    sprintf(delLog, "del \"%s%s\"", outputName, LOG_FORMAT);
+    sprintf(delAux, "del \"%s%s\"", outputName, AUX_FORMAT);
+
     sprintf(start, "start %s%s", outputName, TEX_OUTPUT_FORMAT);
 
     system(pdflatex);
+
+    system(del);
+    system(delLog);
+    system(delAux);
+    
     system(start);
 }
