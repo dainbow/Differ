@@ -47,6 +47,8 @@ void GenerateOutputName(const char beginningName[], char endName[], const char p
     while ((fileD = open(endName, O_RDONLY)) != -1) {
         fileCopyAmount++;
         sprintf(endName, "%s%s(%u)%s", path, beginningName, fileCopyAmount, format);
+
+        close(fileD);
     }
     close(fileD);
     sprintf(endName, "%s%s(%u)", path, beginningName, fileCopyAmount);

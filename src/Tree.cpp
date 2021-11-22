@@ -38,7 +38,16 @@ void NodeDtor(Node* root) {
 
 Node* MakeNewNode(TreeElem data, NodeDataTypes type, Node* left, Node* right) {
     Node* newNode = (Node*)calloc(1, sizeof(newNode[0]));
-    *newNode = {data, type, left, right};
+
+    uint32_t nodeWeight = 1;
+
+    if (left != nullptr) {
+        nodeWeight += left->weight;
+    }
+    if (right != nullptr) {
+        nodeWeight += right->weight;
+    }
+    *newNode = {data, type, nodeWeight, left, right};
 
     return newNode;
 }
@@ -126,14 +135,14 @@ void PrintTreeNodes(Tree* tree, Node* root, FILE* output) {
             "\t%lld[shape=plaintext, label = <"
             "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING= \"0\" CELLPADDING=\"4\">"
             "<TR>"
-                "<TD COLSPAN=\"2\">" TREE_TYPE "</TD>"
+                "<TD COLSPAN=\"2\">" TREE_TYPE "[%u]</TD>"
             "</TR>"
             "<TR>"
                 "<TD PORT = \"l%d\">" LEFT_BRANCH "</TD>"
                 "<TD PORT = \"r%d\">" RIGHT_BRANCH "</TD>"
             "</TR>"
             "</TABLE>>];\n",
-            root - pointerAnchor, dataConverted, 
+            root - pointerAnchor, dataConverted, root->weight,
             curNodeNumber, LEFT_BRANCH_VALUE, 
             curNodeNumber, RIGHT_BRANCH_VALUE);
 
@@ -153,13 +162,13 @@ void PrintTreeNodes(Tree* tree, Node* root, FILE* output) {
             "\t%lld[shape=plaintext, label = <"
             "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING= \"0\" CELLPADDING=\"4\">"
             "<TR>"
-                "<TD COLSPAN=\"2\">" TREE_TYPE "</TD>"
+                "<TD COLSPAN=\"2\">" TREE_TYPE "[%u]</TD>"
             "</TR>"
             "<TR>"
                 "<TD PORT = \"r%d\">" RIGHT_BRANCH "</TD>"
             "</TR>"
             "</TABLE>>];\n",
-            root - pointerAnchor, dataConverted, 
+            root - pointerAnchor, dataConverted, root->weight,
             curNodeNumber, RIGHT_BRANCH_VALUE);
 
         curRecursionDepth += 1;

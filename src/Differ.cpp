@@ -1,26 +1,35 @@
 #include "Differ.h"
 
+//TODO Замены, Маклорен, скобки в одинаковых операциях
+
 int main () {
     TreeCtor(tree);
     TreeCtor(diffedTree);
+    StackCtor(bigStack);
+
+    Text mathPhrases  = {};
+    Text greekSymbols = {};
+    MakeText(&mathPhrases,  MATH_PHRASES);
+    MakeText(&greekSymbols, GREEK_SYMBOLS);
+    DiffContext diffContext = {&mathPhrases, &greekSymbols, &bigStack}; 
 
     ReadTreeFromFile(&tree, "Gachi.txt");
-
-    Text mathPhrases = {};
-    MakeText(&mathPhrases, MATH_PHRASES);
-    
     MakeTreeGraph(&tree, G_STANDART_NAME);
     
     char* outputName = nullptr;
-    FILE* output = StartTex(&tree, &outputName);
-    diffedTree.root = Differentiate(tree.root, output, &mathPhrases);
+    FILE* output     = StartTex(&tree, &outputName, &diffContext);
+
+    diffedTree.root  = Differentiate(tree.root, output, &diffContext, 1);
 
     MakeTreeGraph(&diffedTree, G_STANDART_NAME);
     OptimisationAfterDiff(&diffedTree);
 
-    StopTex(output, outputName, diffedTree.root);
+    StopTex(output, outputName, tree.root, diffedTree.root, &diffContext);
+
+    StackDtor(&bigStack);
     TreeDtor(&diffedTree);
     TreeDtor(&tree);
+    
     printf("END\n");
 }
 
@@ -34,32 +43,32 @@ void ScanBase(Text* input, Stack* stack) {
         for (uint32_t curChar = 0; curChar < input->strings[curString].length - 1; curChar++) {
             int8_t* charPtr = input->strings[curString].value + curChar;
 
-            if ((*charPtr != '(') && 
+            if ((*charPtr != OPEN_BRACKET) && 
                 (curChar == 0)) {
                 StackPush(stack, charPtr);
             }
-            else if ((*charPtr == '(') && 
+            else if ((*charPtr == OPEN_BRACKET) && 
                     (sscanf((const char*)charPtr + 1, " %1[^(]", trashBuff))) {
                 for (uint32_t curIdx = curChar + 1; curIdx < input->strings[curString].length; curIdx++) {
-                    if (input->strings[curString].value[curIdx] == '(') {
+                    if (input->strings[curString].value[curIdx] == OPEN_BRACKET) {
                         StackPush(stack, charPtr);
                         break;
                     }
-                    if (input->strings[curString].value[curIdx] == ')') {
+                    if (input->strings[curString].value[curIdx] == CLOSE_BRACKET) {
                         break;
                     }
                 }
 
                 StackPush(stack, charPtr + 1);
             }
-            else if (*charPtr == '(') {
+            else if (*charPtr == OPEN_BRACKET) {
                 StackPush(stack, charPtr);
             }
-            else if ((*charPtr == ')') && 
+            else if ((*charPtr == CLOSE_BRACKET) && 
                     sscanf((const char*)charPtr + 1, " %1[^)]", trashBuff)) {
                 StackPush(stack, charPtr + 1);
             }
-            else if (*charPtr == ')') {
+            else if (*charPtr == CLOSE_BRACKET) {
                 StackPush(stack, charPtr);
             }
         }
@@ -102,17 +111,21 @@ Node* MakeTreeFromStack(Stack* nodesStack) {
         nodeConvertedData = ProcessNodeData(StackPopIndexDEVELOPERS_ONLY(nodesStack, curIdx), &nodeDataType);
         
         if (nodeDataType == TYPE_UNKNOWN) {
-            if ((char)nodeConvertedData == '(') {
+            if ((char)nodeConvertedData == OPEN_BRACKET) {
                 currentParenthesisDepth += 1;
             }
-            else if ((char)nodeConvertedData == ')') {
+            else if ((char)nodeConvertedData == CLOSE_BRACKET) {
                 rightOne    = (Node*)StackPop(&queueStack);
                 currentNode = (Node*)StackPop(&queueStack);
+
                 currentNode->right = rightOne;
+                currentNode->weight++;
 
                 if (currentNode->type != TYPE_UNO) {
                     leftOne     = (Node*)StackPop(&queueStack);
+
                     currentNode->left  = leftOne;
+                    currentNode->weight++;
                 }
                 
                 currentParenthesisDepth -= 1;
@@ -120,7 +133,7 @@ Node* MakeTreeFromStack(Stack* nodesStack) {
                     StackPush(&queueStack, (StackElem)currentNode);
                 }
                 else {
-                    StackPush(&treeStack, (StackElem)currentNode);
+                    StackPush(&treeStack,  (StackElem)currentNode);
                 }
             }
             continue;
@@ -228,33 +241,33 @@ int32_t ProcessNodeData(StackElem rawData, NodeDataTypes* type) {
 #define R root->right
 #define L root->left
 
-#define D(smth) Differentiate(smth, output, mathPhrases)
+#define D(smth) Differentiate(smth, output, diffContext, logFlag)
 #define C(smth) Copy(smth)
 
-#define MUL(first, second) MakeNewNode((int32_t)('*'), TYPE_OP, first, second)
-#define DIV(first, second) MakeNewNode((int32_t)('/'), TYPE_OP, first, second)
-#define ADD(first, second) MakeNewNode((int32_t)('+'), TYPE_OP, first, second)
-#define SUB(first, second) MakeNewNode((int32_t)('-'), TYPE_OP, first, second)
-#define LOG(first, second) MakeNewNode((int32_t)('l'), TYPE_OP, first, second)
-#define POW(first, second) MakeNewNode((int32_t)('^'), TYPE_OP, first, second)
+#define MUL(first, second) MakeNewNode((int32_t)(MUL_OP), TYPE_OP, first, second)
+#define DIV(first, second) MakeNewNode((int32_t)(DIV_OP), TYPE_OP, first, second)
+#define ADD(first, second) MakeNewNode((int32_t)(ADD_OP), TYPE_OP, first, second)
+#define SUB(first, second) MakeNewNode((int32_t)(SUB_OP), TYPE_OP, first, second)
+#define LOG(first, second) MakeNewNode((int32_t)(LOG_OP), TYPE_OP, first, second)
+#define POW(first, second) MakeNewNode((int32_t)(POW_OP), TYPE_OP, first, second)
 
-#define SIN(smth)          MakeNewNode((int32_t)'s', TYPE_UNO, nullptr, smth)
-#define COS(smth)          MakeNewNode((int32_t)'c', TYPE_UNO, nullptr, smth)
+#define SIN(smth)          MakeNewNode((int32_t)SIN_OP, TYPE_UNO, nullptr, smth)
+#define COS(smth)          MakeNewNode((int32_t)COS_OP, TYPE_UNO, nullptr, smth)
 
-#define CONST_NODE(smth)        MakeNewNode(smth, TYPE_CONST)
-#define VAR_NODE(smth)          MakeNewNode(smth, TYPE_VAR)     
+#define CONST_NODE(smth)   MakeNewNode(smth, TYPE_CONST)
+#define VAR_NODE(smth)     MakeNewNode(smth, TYPE_VAR)     
 
-Node* Differentiate (Node* root, FILE* output, Text* mathPhrases) {
+Node* Differentiate (Node* root, FILE* output, DiffContext* diffContext, bool logFlag) {
     assert(root        != nullptr);
     assert(output      != nullptr);
-    assert(mathPhrases != nullptr);
+    assert(diffContext != nullptr);
 
     Node* returningRoot = nullptr;
 
     switch (root->type) {
     case TYPE_VAR:
-        if (root->data == (int32_t)'e')
-            returningRoot = CONST_NODE('e');
+        if (root->data == (int32_t)E_CONST)
+            returningRoot = VAR_NODE(E_CONST);
         else 
             returningRoot = CONST_NODE(1);
         break;
@@ -263,32 +276,34 @@ Node* Differentiate (Node* root, FILE* output, Text* mathPhrases) {
         break;
     case TYPE_OP:
         switch (root->data) {
-            case (int32_t)('-'):
-            case (int32_t)('+'): 
+            case (int32_t)(SUB_OP):
+                returningRoot = SUB(D(L), D(R));
+                break;
+            case (int32_t)(ADD_OP): 
                 returningRoot = ADD(D(L), D(R));
                 break;
 
-            case (int32_t)('*'):
+            case (int32_t)(MUL_OP):
                 returningRoot = ADD(MUL(D(L), C(R)), MUL(D(R), C(L)));
                 break;
 
-            case (int32_t)('/'):
+            case (int32_t)(DIV_OP):
                 returningRoot = DIV(SUB(MUL(D(L), C(R)), MUL(C(L), D(R))), MUL(C(R), C(R)));
                 break;
 
-            case (int32_t)'l': 
-                returningRoot = DIV(D(R), MUL(LOG(VAR_NODE('e'), C(L)), C(R)));
+            case (int32_t)LOG_OP: 
+                returningRoot = DIV(D(R), MUL(LOG(VAR_NODE(E_CONST), C(L)), C(R)));
                 break;
 
-            case (int32_t)'^': 
+            case (int32_t)POW_OP: 
                 if (CheckForVars(L) && CheckForVars(R))
-                    returningRoot = MUL(C(N), D(MUL(LOG(VAR_NODE('e'), C(L)), C(R))));
+                    returningRoot = MUL(C(N), D(MUL(LOG(VAR_NODE(E_CONST), C(L)), C(R))));
 
                 else if (CheckForVars(L)) 
                     returningRoot = MUL(D(L), MUL(C(R), POW(C(L), SUB(C(R), CONST_NODE(1)))));
 
                 else if (CheckForVars(R))
-                    returningRoot = MUL(LOG(VAR_NODE('e'), C(L)), MUL(D(R), POW(C(L), C(R))));
+                    returningRoot = MUL(LOG(VAR_NODE(E_CONST), C(L)), MUL(D(R), POW(C(L), C(R))));
 
                 else
                     returningRoot = CONST_NODE(0);
@@ -300,11 +315,11 @@ Node* Differentiate (Node* root, FILE* output, Text* mathPhrases) {
         break;
     case TYPE_UNO:
         switch (root->data) {
-        case 's': 
+        case SIN_OP: 
             returningRoot = MUL(COS(C(R)), D(R));
             break;
         
-        case 'c': 
+        case COS_OP: 
             returningRoot = MUL(MUL(CONST_NODE(-1), SIN(C(R))), D(R));
             break;
         
@@ -317,7 +332,10 @@ Node* Differentiate (Node* root, FILE* output, Text* mathPhrases) {
         assert(FAIL && "UNKNOWN DATA TYPE");
     }
 
-    LogDiffProcessToTex(N, returningRoot, output, mathPhrases);
+    if (logFlag) {
+        LogDiffProcessToTex(N, returningRoot, output, diffContext);
+    }
+
     return returningRoot;
 }
 
@@ -343,42 +361,75 @@ int32_t FoldConst(Node* node) {
     assert(node != nullptr);
     int32_t returnValue = 0;
 
-    if (node->type == TYPE_OP) {
-        if ((node->data != (int32_t)'l') &&
+    if ((node->type == TYPE_OP) || (node->type == TYPE_UNO)) {
+        if  (((node->type) == TYPE_OP)        &&
+            ((node->data) != LOG_OP)             &&
             (node->left->type  == TYPE_CONST) &&
             (node->right->type == TYPE_CONST)) {
         switch (node->data) {
-            case (int32_t)('+'):
+            case (int32_t)(ADD_OP):
                 node->data = node->left->data + node->right->data;
                 node->type = TYPE_CONST;
                 break;
-            case (int32_t)('-'):
+            case (int32_t)(SUB_OP):
                 node->data = node->left->data - node->right->data;
                 node->type = TYPE_CONST;
                 break;
-            case (int32_t)('*'):
+            case (int32_t)(MUL_OP):
                 node->data = node->left->data * node->right->data;
                 node->type = TYPE_CONST;
                 break;
-            case (int32_t)('/'):
+            case (int32_t)(DIV_OP):
                 node->data = node->left->data / node->right->data;
+                node->type = TYPE_CONST;
+                break;
+            case (int32_t)(POW_OP):
+                node->data = (int32_t)pow(node->left->data, node->right->data);
                 node->type = TYPE_CONST;
                 break;
             default:
                 assert(FAIL && "UNKNOWN OPERATION");
             }
         }
-        else if (((node->data) == 'l') &&
+        else if (((node->data) == LOG_OP) &&
                 (node->left->type == node->right->type) && (node->left->data == node->right->data) &&
                 ((node->left->type == TYPE_CONST) || (node->left->type == TYPE_VAR))) {
             node->data = 1;
             node->type = TYPE_CONST;
         }
+        else if (((node->type) == TYPE_OP) &&
+                 (node->left->type  == TYPE_VAR)    &&
+                 (node->right->type == TYPE_CONST)  &&
+                 (node->right->data == 0)) {
+            switch (node->data) {
+                case POW_OP:
+                    node->data = 1;
+                    node->type = TYPE_CONST;
+                    break;
+                default:
+                    goto elseSection;
+            }
+        }
+        else if ((node->type       == TYPE_UNO) &&
+                (node->right->data == 0)) {
+            switch (node->data) {
+            case SIN_OP:
+                node->data = 0;
+                node->type = TYPE_CONST;
+                break;
+            case COS_OP:
+                node->data = 1;
+                node->type = TYPE_CONST;
+                break;
+            default:
+                break;
+            }
+        }
         else 
             goto elseSection;        
 
-        NodeDtor(node->left);
-        NodeDtor(node->right);
+        if (node->left  != nullptr) NodeDtor(node->left);
+        if (node->right != nullptr) NodeDtor(node->right);
 
         node->left  = nullptr;
         node->right = nullptr; 
@@ -386,14 +437,10 @@ int32_t FoldConst(Node* node) {
     }
     else {
         elseSection:
-        if (node->type != TYPE_CONST) {
-            if (node->left->type  == TYPE_OP) {
-                returnValue += FoldConst(node->left);
-            }
-            if (node->right->type == TYPE_OP) {
-                returnValue += FoldConst(node->right);
-            }
-        }
+        if (node->left  != nullptr)
+            returnValue += FoldConst(node->left);
+        if (node->right != nullptr) 
+            returnValue += FoldConst(node->right);
     }
 
     return returnValue;
@@ -433,24 +480,24 @@ int32_t FoldConst(Node* node) {
 int32_t CutEqualNodes(Context context) {
     int32_t returnValue = 0;
 
-    if (context.node->data == (int32_t)'+') {
+    if (context.node->data == (int32_t)ADD_OP) {
         CUT_EQUAL_NODES(left, right, 0)
         CUT_EQUAL_NODES(right, left, 0)
     }
-    else if (context.node->data == (int32_t)'*') {
+    else if (context.node->data == (int32_t)MUL_OP) {
         CUT_EQUAL_NODES(left, right, 1)
         CUT_EQUAL_NODES(right, left, 1)
     }
-    else if (context.node->data == (int32_t)'-') {
+    else if (context.node->data == (int32_t)SUB_OP) {
         CUT_EQUAL_NODES(right, left, 1)
     }
-    else if (context.node->data == (int32_t)'^') {
+    else if (context.node->data == (int32_t)POW_OP) {
         CUT_EQUAL_NODES(right, left, 1)
     }
-    else if (context.node->data == (int32_t)'/') {
+    else if (context.node->data == (int32_t)DIV_OP) {
         CUT_EQUAL_NODES(right, left, 1)
     }
-    else if (context.node->data == (int32_t)'l') {
+    else if (context.node->data == (int32_t)LOG_OP) {
         CUT_EQUAL_NODES(left, right, 1)
     }
 
@@ -495,20 +542,20 @@ int32_t CutNullNodes(Context context) {
     int32_t returnValue = 0;
 
     if (context.node->type == TYPE_OP) {
-        if (context.node->data == (int32_t)'*') {
+        if (context.node->data == (int32_t)MUL_OP) {
             CUT_NULL_NODES(left, right, 0)
             CUT_NULL_NODES(right, left, 0)
         }
-        else if (context.node->data == (int32_t)'^') {
+        else if (context.node->data == (int32_t)POW_OP) {
             CUT_NULL_NODES(left, right, 0)
         }
-        else if (context.node->data == (int32_t)'/') {
+        else if (context.node->data == (int32_t)DIV_OP) {
             CUT_NULL_NODES(left, right, 0)
             if (!context.node->right->data) {
                 assert(FAIL && "ZERO DIVISION ERROR");
             }
         }
-        else if (context.node->data == (int32_t)'l') {
+        else if (context.node->data == (int32_t)LOG_OP) {
             CUT_NULL_NODES(right, left, 1)
         }
     }
@@ -544,8 +591,8 @@ int32_t CutMinusOneNodes(Node* node) {
 
     if ((node->type == TYPE_OP) &&
         (node->left->type  == TYPE_CONST)) {
-        CUT_MINUS_ONE_NODES('/', 1, '^')
-        CUT_MINUS_ONE_NODES('-', 0, '*')
+        CUT_MINUS_ONE_NODES(DIV_OP, 1, POW_OP)
+        CUT_MINUS_ONE_NODES(SUB_OP, 0, MUL_OP)
     }
 
     if (node->type == TYPE_OP) {
@@ -572,7 +619,8 @@ int32_t CheckForVars(Node* node) {
     assert(node != nullptr);
     int32_t returnValue = 0;
 
-    if (node->type == TYPE_VAR) {
+    if ((node->type == TYPE_VAR) &&
+        (node->data != E_CONST)) {
         returnValue++;
     }
 
@@ -598,46 +646,58 @@ void OptimisationAfterDiff(Tree* tree) {
         optimisationCounter += CutNullNodes({tree->root, &tree->root});
         optimisationCounter += CutMinusOneNodes(tree->root);
 
-        MakeTreeGraph(tree, G_STANDART_NAME);
+        //MakeTreeGraph(tree, G_STANDART_NAME);
     } while (optimisationCounter);
 }
 
-FILE* StartTex(Tree* tree, char** outputName) {
+FILE* StartTex(Tree* tree, char** outputName, DiffContext* diffContext) {
     assert(tree != nullptr);
-
-    *outputName = MakeLatexTitle(tree, TEX_NAME);
+    
+    *outputName = MakeLatexTitle(tree, TEX_NAME, diffContext);
     assert(*outputName != nullptr);
 
     FILE* output = fopen(*outputName, "a");
     assert(output != nullptr);
 
+    PrintBigNodes(output, diffContext);
+
     return output;
 }
 
-void LogDiffProcessToTex(Node* curNode, Node* diffNode, FILE* output, Text* mathPhrases) {
+void LogDiffProcessToTex(Node* curNode, Node* diffNode, FILE* output, DiffContext* diffContext) {
     assert(curNode     != nullptr);
     assert(diffNode    != nullptr);
     assert(output      != nullptr);
-    assert(mathPhrases != nullptr);
+    assert(diffContext != nullptr);
 
-    fprintf(output, "%s\n\n", mathPhrases->strings[rand() % mathPhrases->strAmount].value);
+    fprintf(output, "%s\n\n", diffContext->mathPhrases->strings
+                              [rand() % diffContext->mathPhrases->strAmount].value);
     fprintf(output, "$(");
-        PrintTexTree(curNode, output);
+        PrintTexTree(1, curNode, output, diffContext);
     fprintf(output, ")'$ = $");
-        PrintTexTree(diffNode, output);
+        PrintTexTree(1, diffNode, output, diffContext);
     fprintf(output, "$\n\n");
+        PrintBigNodes(output, diffContext);
 }
 
-void StopTex(FILE* output, char* outputName, Node* node) {
+void StopTex(FILE* output, char* outputName, Node* beginNode, Node* node, DiffContext* diffContext) {
     assert(output != nullptr);
     assert(node   != nullptr);
 
     fprintf(output, "После некоторых наипростейших упрощений, я получил ответ:\n\n");
     
     fprintf(output, "$");
-        PrintTexTree(node, output);
+        PrintTexTree(1, node, output, diffContext);
     fprintf(output, "$\n\n");
+        PrintBigNodes(output, diffContext);
+    
+    #if(MAKLOREN)
+        fprintf(output, "А также, хотелось бы дать читателю занимательное упражнение: разложить данное выражение в ряд Маклорена, "
+                    "а когда вы вернётесь, то можете сверить ответ\n\n");
 
+        MakeMakloren(output, beginNode, 5, 'x', diffContext);
+    #endif
+    
     fprintf(output, "\\end{document}\n");
     fclose(output);
 
@@ -657,9 +717,57 @@ void StopTex(FILE* output, char* outputName, Node* node) {
 
     system(pdflatex);
 
-    system(del);
-    system(delLog);
-    system(delAux);
+    //system(del);
+    //system(delLog);
+    //system(delAux);
     
     system(start);
+}
+
+void SubstituteVars(Node* node, int32_t varData, int32_t value) {
+    assert(node != 0);
+
+    if (node->left != nullptr) {
+        SubstituteVars(node->left, varData, value);
+    }
+
+    if ((node->type == TYPE_VAR) &&
+        (node->data == varData)) {
+        node->data = value;
+        node->type = TYPE_CONST;
+    }
+
+    if (node->right != nullptr) {
+        SubstituteVars(node->right, varData, value);
+    }
+}
+
+void MakeMakloren(FILE* output, Node* node, int32_t accuracy, int32_t variable, DiffContext* diffContext) {
+    assert(output != nullptr);
+    assert(node   != nullptr);
+    TreeCtor(maklorenTree);
+    TreeCtor(maklorenSubTree);
+
+    maklorenTree.root    = node;
+    maklorenSubTree.root = node;
+
+    fprintf(output, "f(%c) = $", variable);
+    for (int32_t curSum = 0; curSum <= accuracy; curSum++) {
+        if (curSum > 0) {
+            maklorenTree.root    = Differentiate(maklorenTree.root, output, diffContext, 0);
+            OptimisationAfterDiff(&maklorenTree);
+        }
+
+        maklorenSubTree.root = Copy(maklorenTree.root);
+        SubstituteVars(maklorenSubTree.root, variable, 0);
+        OptimisationAfterDiff(&maklorenSubTree);
+
+        fprintf(output, "\\frac{");
+        PrintTexTree(0, maklorenSubTree.root, output, diffContext);
+        fprintf(output, "}{%d!}*x^{%d} + ", curSum, curSum); 
+    }
+    fprintf(output, "o(%c^{%d}), %c \\to 0$\n\n", variable, accuracy, variable);
+    //PrintBigNodes(output, diffContext);
+
+    //TreeDtor(&maklorenTree);
 }

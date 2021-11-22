@@ -36,6 +36,7 @@ struct Node {
     TreeElem data;
     NodeDataTypes type;
 
+    uint32_t weight;
     Node* left;
     Node* right;
 };
@@ -54,6 +55,17 @@ const int32_t MAX_BUFFER_SIZE     = 8000;
 
 const char G_STANDART_NAME[] = "graph";
 
+const char OPEN_BRACKET  = '(';
+const char CLOSE_BRACKET = ')';
+const char E_CONST       = 'e';
+const char SUB_OP        = '-';
+const char ADD_OP        = '+';
+const char MUL_OP        = '*';
+const char POW_OP        = '^';
+const char SIN_OP        = 's';
+const char COS_OP        = 'c';
+const char DIV_OP        = '/';
+const char LOG_OP        = 'l';
 
 #define TreeCtor(tree)    \
     Tree tree;            \
