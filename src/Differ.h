@@ -9,7 +9,7 @@
 #include "Stack.h"
 #include "Latex.h"
 
-#define MAKLOREN 0
+#define MAKLOREN 1
 
 struct Context {
     Node* node;
@@ -35,6 +35,7 @@ int32_t Convert1251ToUtf8 (const char* input, char* output);
 
 Node* Differentiate (Node* root, FILE* output, DiffContext* diffContext, bool logFlag);
 Node* Copy (Node* root);
+Node* MakeFactor(int32_t factor);
 void OptimisationAfterDiff(Tree* tree);
 
 int32_t FoldConst(Node* node);

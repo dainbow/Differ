@@ -243,6 +243,7 @@ int32_t ProcessNodeData(StackElem rawData, NodeDataTypes* type) {
 
 #define D(smth) Differentiate(smth, output, diffContext, logFlag)
 #define C(smth) Copy(smth)
+#define F(smth) MakeFactor(smth)
 
 #define MUL(first, second) MakeNewNode((int32_t)(MUL_OP), TYPE_OP, first, second)
 #define DIV(first, second) MakeNewNode((int32_t)(DIV_OP), TYPE_OP, first, second)
@@ -357,6 +358,15 @@ Node* Copy (Node* root) {
     return nullptr;
 }
 
+Node* MakeFactor(int32_t factor) {
+    if ((factor == 1) || (factor == 0)) {
+        return CONST_NODE(1);
+    }
+    else {
+        return MUL(CONST_NODE(factor), F(factor - 1));
+    }
+}
+
 int32_t FoldConst(Node* node) {
     assert(node != nullptr);
     int32_t returnValue = 0;
@@ -380,13 +390,22 @@ int32_t FoldConst(Node* node) {
                 node->type = TYPE_CONST;
                 break;
             case (int32_t)(DIV_OP):
-                node->data = node->left->data / node->right->data;
-                node->type = TYPE_CONST;
-                break;
+                if ((node->left->data % node->right->data) == 0) {
+                    node->data = node->left->data / node->right->data;
+                    node->type = TYPE_CONST;
+                    break;
+                }
+                else {
+                    goto elseSection;
+                }
             case (int32_t)(POW_OP):
-                node->data = (int32_t)pow(node->left->data, node->right->data);
-                node->type = TYPE_CONST;
-                break;
+                if (node->right->data > 0) {
+                    node->data = (int32_t)pow(node->left->data, node->right->data);
+                    node->type = TYPE_CONST;
+                    break;
+                }
+                else 
+                    goto elseSection;
             default:
                 assert(FAIL && "UNKNOWN OPERATION");
             }
@@ -717,9 +736,9 @@ void StopTex(FILE* output, char* outputName, Node* beginNode, Node* node, DiffCo
 
     system(pdflatex);
 
-    //system(del);
-    //system(delLog);
-    //system(delAux);
+    system(del);
+    system(delLog);
+    system(delAux);
     
     system(start);
 }
@@ -750,6 +769,7 @@ void MakeMakloren(FILE* output, Node* node, int32_t accuracy, int32_t variable, 
 
     maklorenTree.root    = node;
     maklorenSubTree.root = node;
+    Node* finalNode      = nullptr;
 
     fprintf(output, "f(%c) = $", variable);
     for (int32_t curSum = 0; curSum <= accuracy; curSum++) {
@@ -762,11 +782,19 @@ void MakeMakloren(FILE* output, Node* node, int32_t accuracy, int32_t variable, 
         SubstituteVars(maklorenSubTree.root, variable, 0);
         OptimisationAfterDiff(&maklorenSubTree);
 
-        fprintf(output, "\\frac{");
-        PrintTexTree(0, maklorenSubTree.root, output, diffContext);
-        fprintf(output, "}{%d!}*x^{%d} + ", curSum, curSum); 
+        maklorenSubTree.root = MUL(DIV(maklorenSubTree.root, F(curSum)), POW(VAR_NODE('x'), CONST_NODE(curSum)));
+
+        if (finalNode == nullptr)
+            finalNode = maklorenSubTree.root;
+        else
+            finalNode = ADD(finalNode, maklorenSubTree.root);
     }
-    fprintf(output, "o(%c^{%d}), %c \\to 0$\n\n", variable, accuracy, variable);
+
+    maklorenSubTree.root = finalNode;
+    MakeTreeGraph(&maklorenSubTree, G_STANDART_NAME);
+    OptimisationAfterDiff(&maklorenSubTree);
+    PrintTexTree(0, maklorenSubTree.root, output, diffContext);
+    fprintf(output, "+ o(%c^{%d}), %c \\to 0$\n\n", variable, accuracy, variable);
     //PrintBigNodes(output, diffContext);
 
     //TreeDtor(&maklorenTree);
